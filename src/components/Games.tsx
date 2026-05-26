@@ -524,11 +524,19 @@ function LoveMeterScanner() {
           <div
             className="h-full bg-gradient-to-r from-pink-500 via-rose-400 to-fuchsia-300 transition-all duration-100"
             style={{
-              width: `${Math.min(100, (progress / 671) * 100)}%`,
+              width: `${barPct}%`,
               boxShadow: `0 0 ${10 + t * 40}px rgba(244,63,94,${0.5 + t * 0.5})`,
             }}
           />
+          {barMaxed && (
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent)] bg-[length:50%_100%] animate-[shimmer_1.1s_linear_infinite]" />
+          )}
         </div>
+        {barMaxed && (
+          <p className="text-center text-[10px] tracking-[0.3em] text-rose-300/80 mt-1 font-mono">
+            ⚠ BAR LIMIT REACHED — VALUE STILL CLIMBING
+          </p>
+        )}
         <p
           className="text-center mt-2 text-3xl font-bold tabular-nums"
           style={{
