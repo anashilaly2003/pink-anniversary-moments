@@ -417,19 +417,19 @@ const HACKER_LINES = [
 ];
 
 function LoveMeterScanner() {
-  const [progress, setProgress] = useState(90);
+  const [progress, setProgress] = useState(0);
   const [lines, setLines] = useState<string[]>(["> boot LOVE METER v6.71"]);
   const [phase, setPhase] = useState<"scan" | "explode" | "final">("scan");
   const linesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (phase !== "scan") return;
-    let p = 90;
+    let p = 0;
     let lineIdx = 0;
 
     const tick = () => {
-      // speed accelerates with progress
-      const inc = 0.4 + (p - 90) / 60;
+      // bigger increments → faster overall run
+      const inc = p < 100 ? 4 + p * 0.05 : 6 + (p - 100) / 20;
       p += inc;
       if (p >= 671) {
         setProgress(671);
@@ -438,20 +438,19 @@ function LoveMeterScanner() {
       }
       setProgress(Math.round(p));
 
-      // stream hacker lines continuously, faster as p grows
       const msg = HACKER_LINES[lineIdx % HACKER_LINES.length];
-      const prefix = p > 200 ? (p > 400 ? "[CRIT]" : "[WARN]") : "[ OK ]";
+      const prefix = p > 250 ? (p > 450 ? "[CRIT]" : "[WARN]") : "[ OK ]";
       setLines((prev) => {
         const next = [...prev, `> ${prefix} ${msg} (${Math.round(p)}%)`];
         return next.length > 40 ? next.slice(next.length - 40) : next;
       });
       lineIdx++;
 
-      // vibration speed: shorter delay as p grows
-      const delay = Math.max(40, 260 - (p - 90) * 0.6);
+      // faster vibration cadence overall
+      const delay = Math.max(25, 110 - p * 0.18);
       timer = window.setTimeout(tick, delay);
     };
-    let timer = window.setTimeout(tick, 200);
+    let timer = window.setTimeout(tick, 120);
     return () => clearTimeout(timer);
   }, [phase]);
 
