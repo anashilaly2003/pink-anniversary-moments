@@ -478,10 +478,12 @@ function LoveMeterScanner() {
     );
   }
 
-  // intensity 0..1 between 90 and 671
-  const t = Math.min(1, Math.max(0, (progress - 90) / (671 - 90)));
+  // intensity 0..1 — ramps up after the bar fills toward 100%
+  const t = Math.min(1, Math.max(0, (progress - 50) / (671 - 50)));
   const shakeMagnitude = 2 + t * 18;
   const shakeDur = 0.4 - t * 0.35;
+  const barPct = Math.min(100, progress);
+  const barMaxed = progress >= 100;
 
   return (
     <div
