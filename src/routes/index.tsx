@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
 });
 
 // 📅 ⬇️ CHANGE THE START DATE OF YOUR RELATIONSHIP HERE
-const RELATIONSHIP_START = new Date("2021-05-26");
+const RELATIONSHIP_START = new Date("2021-05-28");
 
 // 💌 Love messages — edit freely
 const loveMessages = [
