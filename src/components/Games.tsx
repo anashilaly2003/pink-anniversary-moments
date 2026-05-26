@@ -417,19 +417,19 @@ const HACKER_LINES = [
 ];
 
 function LoveMeterScanner() {
-  const [progress, setProgress] = useState(90);
+  const [progress, setProgress] = useState(0);
   const [lines, setLines] = useState<string[]>(["> boot LOVE METER v6.71"]);
   const [phase, setPhase] = useState<"scan" | "explode" | "final">("scan");
   const linesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (phase !== "scan") return;
-    let p = 90;
+    let p = 0;
     let lineIdx = 0;
 
     const tick = () => {
-      // speed accelerates with progress
-      const inc = 0.4 + (p - 90) / 60;
+      // bigger increments → faster overall run
+      const inc = p < 100 ? 4 + p * 0.05 : 6 + (p - 100) / 20;
       p += inc;
       if (p >= 671) {
         setProgress(671);
@@ -438,20 +438,19 @@ function LoveMeterScanner() {
       }
       setProgress(Math.round(p));
 
-      // stream hacker lines continuously, faster as p grows
       const msg = HACKER_LINES[lineIdx % HACKER_LINES.length];
-      const prefix = p > 200 ? (p > 400 ? "[CRIT]" : "[WARN]") : "[ OK ]";
+      const prefix = p > 250 ? (p > 450 ? "[CRIT]" : "[WARN]") : "[ OK ]";
       setLines((prev) => {
         const next = [...prev, `> ${prefix} ${msg} (${Math.round(p)}%)`];
         return next.length > 40 ? next.slice(next.length - 40) : next;
       });
       lineIdx++;
 
-      // vibration speed: shorter delay as p grows
-      const delay = Math.max(40, 260 - (p - 90) * 0.6);
+      // faster vibration cadence overall
+      const delay = Math.max(25, 110 - p * 0.18);
       timer = window.setTimeout(tick, delay);
     };
-    let timer = window.setTimeout(tick, 200);
+    let timer = window.setTimeout(tick, 120);
     return () => clearTimeout(timer);
   }, [phase]);
 
@@ -479,10 +478,12 @@ function LoveMeterScanner() {
     );
   }
 
-  // intensity 0..1 between 90 and 671
-  const t = Math.min(1, Math.max(0, (progress - 90) / (671 - 90)));
+  // intensity 0..1 — ramps up after the bar fills toward 100%
+  const t = Math.min(1, Math.max(0, (progress - 50) / (671 - 50)));
   const shakeMagnitude = 2 + t * 18;
   const shakeDur = 0.4 - t * 0.35;
+  const barPct = Math.min(100, progress);
+  const barMaxed = progress >= 100;
 
   return (
     <div
@@ -499,6 +500,10 @@ function LoveMeterScanner() {
           25% { transform: translate(calc(var(--sm) * -1), calc(var(--sm) * 0.4)) rotate(-0.6deg); }
           50% { transform: translate(var(--sm), calc(var(--sm) * -0.4)) rotate(0.6deg); }
           75% { transform: translate(calc(var(--sm) * -0.6), var(--sm)) rotate(-0.4deg); }
+        }
+        @keyframes shimmer {
+          0% { background-position: -50% 0; }
+          100% { background-position: 150% 0; }
         }
       `}</style>
 
@@ -523,11 +528,19 @@ function LoveMeterScanner() {
           <div
             className="h-full bg-gradient-to-r from-pink-500 via-rose-400 to-fuchsia-300 transition-all duration-100"
             style={{
-              width: `${Math.min(100, (progress / 671) * 100)}%`,
+              width: `${barPct}%`,
               boxShadow: `0 0 ${10 + t * 40}px rgba(244,63,94,${0.5 + t * 0.5})`,
             }}
           />
+          {barMaxed && (
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent)] bg-[length:50%_100%] animate-[shimmer_1.1s_linear_infinite]" />
+          )}
         </div>
+        {barMaxed && (
+          <p className="text-center text-[10px] tracking-[0.3em] text-rose-300/80 mt-1 font-mono">
+            ⚠ BAR LIMIT REACHED — VALUE STILL CLIMBING
+          </p>
+        )}
         <p
           className="text-center mt-2 text-3xl font-bold tabular-nums"
           style={{
@@ -583,11 +596,21 @@ function LoveGPSGame() {
 
   useEffect(() => {
     if (idx >= GPS_SEQUENCE.length) {
-      const t = setTimeout(() => setFound(true), 900);
+      const t = setTimeout(() => setFound(true), 1400);
       return () => clearTimeout(t);
     }
     const step = GPS_SEQUENCE[idx];
-    const delay = step.tier === "found" ? 1600 : step.tier === "quartier" ? 750 : 900;
+    // Slower overall + dramatic dwell on the "getting warmer" hits
+    const isMorocco = step.label.startsWith("Morocco");
+    const isTangier = step.label === "Tangier";
+    const isMghogha = step.label.startsWith("Mghogha");
+    const delay =
+      isMghogha ? 2600 :
+      isTangier ? 2200 :
+      isMorocco ? 2000 :
+      step.tier === "quartier" ? 1500 :
+      step.tier === "city"     ? 1600 :
+                                 1500;
     const t = setTimeout(() => setIdx((i) => i + 1), delay);
     return () => clearTimeout(t);
   }, [idx]);
@@ -595,7 +618,14 @@ function LoveGPSGame() {
   const current = GPS_SEQUENCE[Math.min(idx, GPS_SEQUENCE.length - 1)];
   const bpm = current.bpm;
   const tier = current.tier;
+  const isMorocco = current.label.startsWith("Morocco");
+  const isTangier = current.label === "Tangier";
+  const isMghogha = current.label.startsWith("Mghogha");
+  const lockOn = isMorocco || isTangier || isMghogha;
   const tierLabel =
+    isMghogha          ? "💗 SOULMATE LOCATED" :
+    isTangier          ? "🎯 LOCK ACQUIRED — homing in" :
+    isMorocco          ? "🔥 SIGNAL FOUND — getting warmer" :
     tier === "country" ? "🌍 Scanning countries" :
     tier === "city"    ? "🏙️ Scanning cities of Morocco" :
     tier === "quartier"? "📍 Scanning Tangier quarters" :
@@ -625,26 +655,51 @@ function LoveGPSGame() {
   }
 
   return (
-    <div className="relative min-h-[560px] flex flex-col items-center p-6 bg-gradient-to-br from-rose-100 to-pink-200 overflow-hidden">
+    <div className={`relative min-h-[560px] flex flex-col items-center p-6 overflow-hidden transition-colors duration-500 ${lockOn ? "bg-gradient-to-br from-rose-200 via-pink-300 to-fuchsia-200" : "bg-gradient-to-br from-rose-100 to-pink-200"}`}>
       <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "linear-gradient(rgba(244,63,94,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(244,63,94,.25) 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
+      {lockOn && (
+        <div className="absolute inset-0 pointer-events-none animate-flash" />
+      )}
 
-      <p className="relative z-10 text-rose-500 uppercase tracking-[0.3em] text-[10px] mb-2 mt-2">{tierLabel}</p>
+      <p className={`relative z-10 uppercase tracking-[0.3em] text-[10px] mb-2 mt-2 transition-all ${lockOn ? "text-rose-700 font-bold text-xs" : "text-rose-500"}`}>
+        {tierLabel}
+      </p>
 
       <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 w-full items-center">
         {/* RADAR */}
         <div className="flex flex-col items-center">
-          <div className="relative w-56 h-56 rounded-full border-4 border-rose-400/60 shadow-[0_0_60px_rgba(244,63,94,.5)] bg-pink-100/50 flex items-center justify-center">
+          <div
+            className={`relative w-56 h-56 rounded-full border-4 flex items-center justify-center transition-all duration-500 ${lockOn ? "border-rose-600 scale-110" : "border-rose-400/60"}`}
+            style={{
+              boxShadow: lockOn
+                ? `0 0 ${isMghogha ? 120 : isTangier ? 90 : 70}px rgba(244,63,94,.9), inset 0 0 40px rgba(244,63,94,.4)`
+                : "0 0 60px rgba(244,63,94,.5)",
+              background: lockOn ? "rgba(255,200,210,.6)" : "rgba(255,228,235,.5)",
+            }}
+          >
             <div className="absolute inset-3 rounded-full border-2 border-rose-400/40" />
             <div className="absolute inset-8 rounded-full border-2 border-rose-400/30" />
-            <div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(from 0deg, transparent 70%, rgba(244,63,94,.6) 100%)", animation: `spin-slow ${Math.max(0.6, 2 - (bpm - 70) / 80)}s linear infinite` }} />
-            {tier === "found" ? (
-              <MapPin className="w-16 h-16 text-rose-600 fill-rose-500 drop-shadow-[0_0_20px_rgba(244,63,94,.8)] relative z-10 animate-heart-beat" />
+            {lockOn && (
+              <>
+                <div className="absolute inset-0 rounded-full border-2 border-rose-500/70" style={{ animation: "shockwave 1.4s ease-out infinite" }} />
+                <div className="absolute inset-0 rounded-full border-2 border-rose-400/60" style={{ animation: "shockwave 1.4s ease-out 0.5s infinite" }} />
+              </>
+            )}
+            <div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(from 0deg, transparent 70%, rgba(244,63,94,.6) 100%)", animation: `spin-slow ${Math.max(0.4, 2 - (bpm - 70) / 80)}s linear infinite` }} />
+            {tier === "found" || isMghogha ? (
+              <MapPin className="w-20 h-20 text-rose-600 fill-rose-500 drop-shadow-[0_0_30px_rgba(244,63,94,1)] relative z-10 animate-heart-beat" />
+            ) : lockOn ? (
+              <MapPin className="w-14 h-14 text-rose-600 fill-rose-500 drop-shadow-[0_0_20px_rgba(244,63,94,.9)] relative z-10 animate-heart-beat" />
             ) : (
               <Radar className="w-12 h-12 text-rose-500 animate-pulse relative z-10" />
             )}
           </div>
-          <div key={current.label} className="mt-4 px-4 py-2 rounded-full bg-white/70 border border-rose-200 shadow font-mono text-rose-600 text-sm animate-fade-in-up">
-            {current.label}
+          <div
+            key={current.label}
+            className={`mt-4 px-4 py-2 rounded-full border shadow font-mono animate-fade-in-up ${lockOn ? "bg-rose-600 border-rose-700 text-white text-base font-bold tracking-wider shadow-[0_0_30px_rgba(244,63,94,.7)]" : "bg-white/70 border-rose-200 text-rose-600 text-sm"}`}
+            style={lockOn ? { animation: "fade-in-up 0.4s ease-out, heart-beat 1s ease-in-out infinite" } : undefined}
+          >
+            {lockOn && "📍 "}{current.label}
           </div>
         </div>
 
@@ -691,7 +746,9 @@ function LoveGPSGame() {
         </div>
       </div>
 
-      <p className="relative z-10 mt-6 text-rose-700 font-semibold italic">Searching for your soulmate…</p>
+      <p className={`relative z-10 mt-6 font-semibold italic transition-all duration-300 ${lockOn ? "text-rose-700 text-xl tracking-wide animate-heart-beat" : "text-rose-700/80"}`}>
+        {isMghogha ? "💗 She's right here." : isTangier ? "Closing in on her neighborhood…" : isMorocco ? "Heart racing — she's in this country!" : "Searching for your soulmate…"}
+      </p>
     </div>
   );
 }
