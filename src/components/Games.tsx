@@ -501,6 +501,10 @@ function LoveMeterScanner() {
           50% { transform: translate(var(--sm), calc(var(--sm) * -0.4)) rotate(0.6deg); }
           75% { transform: translate(calc(var(--sm) * -0.6), var(--sm)) rotate(-0.4deg); }
         }
+        @keyframes shimmer {
+          0% { background-position: -50% 0; }
+          100% { background-position: 150% 0; }
+        }
       `}</style>
 
       {phase === "explode" && (
