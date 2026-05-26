@@ -746,7 +746,9 @@ function LoveGPSGame() {
         </div>
       </div>
 
-      <p className="relative z-10 mt-6 text-rose-700 font-semibold italic">Searching for your soulmate…</p>
+      <p className={`relative z-10 mt-6 font-semibold italic transition-all duration-300 ${lockOn ? "text-rose-700 text-xl tracking-wide animate-heart-beat" : "text-rose-700/80"}`}>
+        {isMghogha ? "💗 She's right here." : isTangier ? "Closing in on her neighborhood…" : isMorocco ? "Heart racing — she's in this country!" : "Searching for your soulmate…"}
+      </p>
     </div>
   );
 }
