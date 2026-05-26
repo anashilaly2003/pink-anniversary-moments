@@ -596,11 +596,21 @@ function LoveGPSGame() {
 
   useEffect(() => {
     if (idx >= GPS_SEQUENCE.length) {
-      const t = setTimeout(() => setFound(true), 900);
+      const t = setTimeout(() => setFound(true), 1400);
       return () => clearTimeout(t);
     }
     const step = GPS_SEQUENCE[idx];
-    const delay = step.tier === "found" ? 1600 : step.tier === "quartier" ? 750 : 900;
+    // Slower overall + dramatic dwell on the "getting warmer" hits
+    const isMorocco = step.label.startsWith("Morocco");
+    const isTangier = step.label === "Tangier";
+    const isMghogha = step.label.startsWith("Mghogha");
+    const delay =
+      isMghogha ? 2600 :
+      isTangier ? 2200 :
+      isMorocco ? 2000 :
+      step.tier === "quartier" ? 1500 :
+      step.tier === "city"     ? 1600 :
+                                 1500;
     const t = setTimeout(() => setIdx((i) => i + 1), delay);
     return () => clearTimeout(t);
   }, [idx]);
@@ -608,7 +618,14 @@ function LoveGPSGame() {
   const current = GPS_SEQUENCE[Math.min(idx, GPS_SEQUENCE.length - 1)];
   const bpm = current.bpm;
   const tier = current.tier;
+  const isMorocco = current.label.startsWith("Morocco");
+  const isTangier = current.label === "Tangier";
+  const isMghogha = current.label.startsWith("Mghogha");
+  const lockOn = isMorocco || isTangier || isMghogha;
   const tierLabel =
+    isMghogha          ? "💗 SOULMATE LOCATED" :
+    isTangier          ? "🎯 LOCK ACQUIRED — homing in" :
+    isMorocco          ? "🔥 SIGNAL FOUND — getting warmer" :
     tier === "country" ? "🌍 Scanning countries" :
     tier === "city"    ? "🏙️ Scanning cities of Morocco" :
     tier === "quartier"? "📍 Scanning Tangier quarters" :
