@@ -428,8 +428,8 @@ function LoveMeterScanner() {
     let lineIdx = 0;
 
     const tick = () => {
-      // bigger increments → faster overall run
-      const inc = p < 100 ? 4 + p * 0.05 : 6 + (p - 100) / 20;
+      // slightly slower increments
+      const inc = p < 100 ? 2.5 + p * 0.03 : 4 + (p - 100) / 30;
       p += inc;
       if (p >= 671) {
         setProgress(671);
@@ -446,11 +446,11 @@ function LoveMeterScanner() {
       });
       lineIdx++;
 
-      // faster vibration cadence overall
-      const delay = Math.max(25, 110 - p * 0.18);
+      // slightly slower cadence
+      const delay = Math.max(35, 160 - p * 0.12);
       timer = window.setTimeout(tick, delay);
     };
-    let timer = window.setTimeout(tick, 120);
+    let timer = window.setTimeout(tick, 180);
     return () => clearTimeout(timer);
   }, [phase]);
 
